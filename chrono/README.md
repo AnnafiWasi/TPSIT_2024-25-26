@@ -1,19 +1,19 @@
-# Hello World
+# Chrono
 
-A new Flutter project created with FlutLab - https://flutlab.io
+**Autore:** Kazi Annafi Wasi
+Questo progetto è un semplice cronometro realizzato in Flutter. Il cronometro mostra minuti, secondi e decimi di secondo.
 
-## Getting Started
+## Funzionamento
+* Un **ticker** emette un evento ogni 100ms.
+* Ogni 10 tick viene incrementato il numero dei secondi.
+* L'interfaccia aggiorna il tempo tramite uno **StreamBuilder**.
 
-A few resources to get you started if this is your first Flutter project:
+## Controlli
+Sono presenti due pulsanti in basso a destra:
 
-- https://flutter.dev/docs/get-started/codelab
-- https://flutter.dev/docs/cookbook
+* **START / STOP / RESET**: avvia, ferma o azzera il cronometro.
+* **PAUSE / RESUME**: mette in pausa o riprende il conteggio (solo quando il cronometro è in START).
 
-For help getting started with Flutter, view our
-https://flutter.dev/docs, which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
-## Getting Started: FlutLab - Flutter Online IDE
-
-- How to use FlutLab? Please, view our https://flutlab.io/docs
-- Join the discussion and conversation on https://flutlab.io/residents
+## Scelte principali
+* Uso di `StreamController` per separare i tick dai secondi.
+* `Timer.periodic` per generare intervalli regolari.
