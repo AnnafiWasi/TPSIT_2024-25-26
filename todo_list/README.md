@@ -1,19 +1,9 @@
 # todo_list
 
-A new Flutter project created with FlutLab - https://flutlab.io
+GridView per le Card: Ogni card è un contenitore che può avere una lista di to-dos. La griglia mostra un numero dinamico di card, organizzate in righe da 2.
 
-## Getting Started
+Ogni Card contiene una Lista di To-Dos: Per ogni card, vengono visualizzati i to-dos associati a quella card. Ogni to-do può essere segnato come completato tramite una checkbox.
 
-A few resources to get you started if this is your first Flutter project:
+Aggiunta di Nuove Card e To-Dos: Il floating action button aggiunge una nuova card alla griglia. Ogni card ha un pulsante che permette di aggiungere nuovi to-dos.
 
-- https://flutter.dev/docs/get-started/codelab
-- https://flutter.dev/docs/cookbook
-
-For help getting started with Flutter, view our
-https://flutter.dev/docs, which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
-## Getting Started: FlutLab - Flutter Online IDE
-
-- How to use FlutLab? Please, view our https://flutlab.io/docs
-- Join the discussion and conversation on https://flutlab.io/residents
+Gestione dello Stato: Tutto il comportamento (aggiungere card, cambiare lo stato dei to-dos, ecc.) è gestito tramite un oggetto TodoListNotifier, che aggiorna l'interfaccia utente ogni volta che lo stato cambia.
