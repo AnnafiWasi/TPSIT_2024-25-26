@@ -11,12 +11,13 @@ class Todo {
   int cardIndex;
 
   Map<String, dynamic> toMap() {
-    return {
-      'id': id,
+    final map = <String, dynamic>{
       'name': name,
       'checked': checked ? 1 : 0,
       'cardIndex': cardIndex,
     };
+    if (id != null) map['id'] = id;
+    return map;
   }
 
   factory Todo.fromMap(Map<String, dynamic> map) {

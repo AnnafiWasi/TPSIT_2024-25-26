@@ -3,72 +3,61 @@ import 'package:sqflite/sqflite.dart';
 import 'model.dart';
 
 class DatabaseHelper {
-  static Future<Database> init() async {
-    // get path
+  static Database? _db;
+
+  static Future<Database> _getDb() async {
+    if (_db != null) return _db!;
     String path = join(await getDatabasesPath(), 'todos.db');
-    print('Database path: $path');
-    // open/create the database
-    return await openDatabase(path, version: 1, onCreate: _createTable);
+    _db = await openDatabase(path, version: 1, onCreate: _createTable);
+    return _db!;
   }
 
   static Future<void> _createTable(Database db, int version) async {
-    // bool -> INTEGER
     await db.execute('''
     CREATE TABLE todos (
-      id INTEGER NOT NULL PRIMARY KEY,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      checked INTEGER NOT NULL 
+      checked INTEGER NOT NULL,
+      cardIndex INTEGER NOT NULL
     );
     ''');
-    print('Table todos created!');
+  }
+
+  static Future<void> init() async {
+    await _getDb();
   }
 
   static Future<List<Todo>> getTodos() async {
-    String path = join(await getDatabasesPath(), 'todos.db');
-    Database db = await openDatabase(path, version: 1);
-    /*
-    final List<Map<String, dynamic>> result = await db.rawQuery(
-       'SELECT * FROM todos',
-    );
-    */
+    Database db = await _getDb();
     final List<Map<String, dynamic>> result = await db.query('todos');
-    if (result.isEmpty) {
-      return <Todo>[];
-    }
-    // db.close();
+    if (result.isEmpty) return <Todo>[];
     return result.map((row) => Todo.fromMap(row)).toList();
   }
 
   static Future<void> insertTodo(Todo todo) async {
-    String path = join(await getDatabasesPath(), 'todos.db');
-    Database db = await openDatabase(path, version: 1);
-    // db.rawInsert('INSERT INTO todos(name, checked) values (?, ?)', [todo.name, todo.checked ? 1 : 0]);
-    db.insert('todos', todo.toMap());
-    print(
-      '////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// Todo inserito! ${todo.toMap()}',
-    );
-    // db.close();
+    Database db = await _getDb();
+    await db.insert('todos', todo.toMap());
   }
 
   static Future<void> updateTodo(Todo todo) async {
-    String path = join(await getDatabasesPath(), 'todos.db');
-    Database db = await openDatabase(path, version: 1);
-    // do not check existence!
-    // db.rawUpdate('UPDATE todos SET value = ? WHERE id = ?', [todo.checked ? 0 : 1, todo.id]);
-    db.update('todos', todo.toMap(), where: 'id = ?', whereArgs: [todo.id]);
-    // db.close();
+    Database db = await _getDb();
+    await db.update(
+      'todos',
+      todo.toMap(),
+      where: 'id = ?',
+      whereArgs: [todo.id],
+    );
   }
 
   static Future<void> deleteTodo(Todo todo) async {
-    String path = join(await getDatabasesPath(), 'todos.db');
-    Database db = await openDatabase(path, version: 1);
-    db.delete('todos', where: 'id = ?', whereArgs: [todo.id]);
-    // db.close();
+    Database db = await _getDb();
+    await db.delete('todos', where: 'id = ?', whereArgs: [todo.id]);
   }
 
-  Future<int> deleteAll() async {
-    String path = join(await getDatabasesPath(), 'todos.db');
-    Database db = await openDatabase(path, version: 1);
+  static Future<int> deleteAll() async {
+    Database db = await _getDb();
     return await db.delete('todos');
   }
 }
+
+//adb shell run-as com.example.todo_list rm /data/data/com.example.todo_list/databases/todos.db

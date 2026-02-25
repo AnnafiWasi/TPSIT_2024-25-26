@@ -37,17 +37,19 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+  final TextEditingController _textFieldController = TextEditingController();
   @override
-  void initState() {
+  initState() {
     super.initState();
     _init();
   }
 
   Future<void> _init() async {
-    await DatabaseHelper.init(); // chiama il DB all’avvio
+    await DatabaseHelper.init();
+    if (mounted) {
+      await context.read<TodoListNotifier>().loadFromDb();
+    }
   }
-
-  final TextEditingController _textFieldController = TextEditingController();
 
   Future<void> _displayDialog(TodoListNotifier notifier, int cardIndex) async {
     return showDialog<void>(
@@ -65,7 +67,12 @@ class _MyHomePageState extends State<MyHomePage> {
               child: const Text('Add'),
               onPressed: () {
                 Navigator.of(context).pop();
-                notifier.addTodoToCard(cardIndex, _textFieldController.text);
+                if (_textFieldController.text.trim().isNotEmpty) {
+                  notifier.addTodoToCard(
+                    cardIndex,
+                    _textFieldController.text.trim(),
+                  );
+                }
                 _textFieldController.clear();
               },
             ),

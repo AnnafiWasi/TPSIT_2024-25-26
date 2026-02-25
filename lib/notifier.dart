@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-
 import 'model.dart';
+import 'helper.dart';
 
 class TodoListNotifier with ChangeNotifier {
   final _todos = <Todo>[];
@@ -8,24 +8,49 @@ class TodoListNotifier with ChangeNotifier {
 
   int get length => _cardCount;
 
+  Future<void> loadFromDb() async {
+    final todos = await DatabaseHelper.getTodos();
+    print('=== loadFromDb: trovati ${todos.length} todos ===');
+    for (var t in todos) {
+      print(
+        '  todo: id=${t.id}, name=${t.name}, cardIndex=${t.cardIndex}, checked=${t.checked}',
+      );
+    }
+    _todos.clear();
+    _todos.addAll(todos);
+    if (_todos.isNotEmpty) {
+      _cardCount =
+          _todos.map((t) => t.cardIndex).reduce((a, b) => a > b ? a : b) + 1;
+    }
+    print('=== cardCount dopo load: $_cardCount ===');
+    notifyListeners();
+  }
+
   void addCard() {
     _cardCount++;
     notifyListeners();
   }
 
-  void addTodoToCard(int cardIndex, String name) {
-    _todos.add(
-      Todo(id: null, name: name, checked: false, cardIndex: cardIndex),
+  Future<void> addTodoToCard(int cardIndex, String name) async {
+    final todo = Todo(
+      id: null,
+      name: name,
+      checked: false,
+      cardIndex: cardIndex,
     );
-    notifyListeners();
+    await DatabaseHelper.insertTodo(todo);
+    print('=== insertTodo chiamato per card $cardIndex, name=$name ===');
+    await loadFromDb();
   }
 
-  void changeTodo(Todo todo) {
+  Future<void> changeTodo(Todo todo) async {
     todo.checked = !todo.checked;
+    await DatabaseHelper.updateTodo(todo);
     notifyListeners();
   }
 
-  void deleteTodo(Todo todo) {
+  Future<void> deleteTodo(Todo todo) async {
+    await DatabaseHelper.deleteTodo(todo);
     _todos.remove(todo);
     notifyListeners();
   }
