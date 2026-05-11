@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Brawl Tracker - Test Backend</title>
+</head>
+<body>
+
+  <h1>Brawl Tracker - Test Backend</h1>
+  <p>Base URL: <input id="base_url" value="http://localhost/brawl_tracker" size="40"></p>
+  <p><small>Risultati appaiono nel riquadro sotto ogni sezione.</small></p>
+
+  <script>
+    function base() {
+      return document.getElementById("base_url").value.replace(/\/$/, "");
+    }
+
+    async function call(url, method, body) {
+      const opts = { method, headers: { "Content-Type": "application/json" } };
+      if (body) opts.body = JSON.stringify(body);
+      try {
+        const res = await fetch(url, opts);
+        const data = await res.json();
+        return { status: res.status, data };
+      } catch (e) {
+        return { status: "ERRORE", data: { error: e.message } };
+      }
+    }
+
+    function show(id, result) {
+      document.getElementById(id).textContent =
+        "Status: " + result.status + "\n" + JSON.stringify(result.data, null, 2);
+    }
+
+    async function loadBrawlers() {
+      const res = await call(base() + "/proxy/get_brawlers.php", "GET");
+      show("brawlers_list_out", res);
+      const select = document.getElementById("build_brawler");
+      select.innerHTML = '<option value="">-- Scegli brawler --</option>';
+      if (res.data && res.data.brawlers) {
+        res.data.brawlers.forEach(b => {
+          const opt = document.createElement("option");
+          opt.value = b.id;
+          opt.textContent = b.name;
+          select.appendChild(opt);
+        });
+      }
+    }
+
+    async function onBrawlerChange() {
+      const brawler_id = document.getElementById("build_brawler").value;
+      if (!brawler_id) return;
+
+      // Carica gadget (max 2 per brawler)
+      const gRes = await call(base() + "/proxy/get_gadgets.php?brawler_id=" + brawler_id, "GET");
+      const gadgetSelect = document.getElementById("build_gadget");
+      gadgetSelect.innerHTML = '<option value="">-- Scegli gadget --</option>';
+      if (gRes.data && gRes.data.gadgets) {
+        gRes.data.gadgets.forEach(g => {
+          const opt = document.createElement("option");
+          opt.value = g.id;
+          opt.textContent = g.name;
+          gadgetSelect.appendChild(opt);
+        });
+      }
+
+      // Carica starpowers (max 2 per brawler)
+      const spRes = await call(base() + "/proxy/get_starpowers.php?brawler_id=" + brawler_id, "GET");
+      const spSelect = document.getElementById("build_starpower");
+      spSelect.innerHTML = '<option value="">-- Scegli star power --</option>';
+      if (spRes.data && spRes.data.starpowers) {
+        spRes.data.starpowers.forEach(sp => {
+          const opt = document.createElement("option");
+          opt.value = sp.id;
+          opt.textContent = sp.name;
+          spSelect.appendChild(opt);
+        });
+      }
+    }
+
+    async function submitBuild() {
+      const user_tag     = document.getElementById("build_user").value;
+      const brawler_id   = parseInt(document.getElementById("build_brawler").value);
+      const gadget_id    = parseInt(document.getElementById("build_gadget").value);
+      const starpower_id = parseInt(document.getElementById("build_starpower").value);
+
+      if (!user_tag || !brawler_id || !gadget_id || !starpower_id) {
+        document.getElementById("build_add_out").textContent = "⚠️ Compila tutti i campi!";
+        return;
+      }
+
+      const res = await call(base() + "/builds/add_build.php", "POST", {
+        user_tag, brawler_id, gadget_id, starpower_id
+      });
+      show("build_add_out", res);
+    }
+  </script>
+
+  <hr>
+
+  <!-- 1. REGISTER -->
+  <h2>1. Register</h2>
+  Tag: <input id="reg_tag" value="#ABC123"> &nbsp;
+  Password: <input id="reg_pass" value="test1234">
+  <button onclick="(async()=>{ show('reg_out', await call(base()+'/auth/register.php','POST',{tag:document.getElementById('reg_tag').value,password:document.getElementById('reg_pass').value})); })()">Registra</button>
+  <pre id="reg_out"></pre>
+
+  <hr>
+
+  <!-- 2. LOGIN -->
+  <h2>2. Login</h2>
+  Tag: <input id="log_tag" value="#ABC123"> &nbsp;
+  Password: <input id="log_pass" value="test1234">
+  <button onclick="(async()=>{ show('log_out', await call(base()+'/auth/login.php','POST',{tag:document.getElementById('log_tag').value,password:document.getElementById('log_pass').value})); })()">Login</button>
+  <pre id="log_out"></pre>
+
+  <hr>
+
+  <!-- 3. GET PLAYER -->
+  <h2>3. Get Player (proxy → API Brawl Stars)</h2>
+  Player Tag: <input id="player_tag" value="#TAGREALE">
+  <button onclick="(async()=>{ show('player_out', await call(base()+'/proxy/get_player.php?player_tag='+encodeURIComponent(document.getElementById('player_tag').value),'GET')); })()">Cerca Giocatore</button>
+  <pre id="player_out"></pre>
+
+  <hr>
+
+  <!-- 4. SYNC BRAWLERS -->
+  <h2>4. Sync Brawlers ⚠️ (esegui 1 volta sola)</h2>
+  <p>Chiama l'API Brawl Stars e salva tutti i brawler, gadget (2 per brawler) e star power (2 per brawler) nel DB.</p>
+  <button onclick="(async()=>{
+    document.getElementById('sync_out').textContent = 'Caricamento in corso, attendi...';
+    show('sync_out', await call(base()+'/proxy/sync_brawlers.php','GET'));
+  })()">▶ Avvia Sync</button>
+  <pre id="sync_out"></pre>
+
+  <hr>
+
+  <!-- 5. LISTA BRAWLERS -->
+  <h2>5. Lista Brawlers dal DB</h2>
+  <p>Carica anche i menu del punto 10.</p>
+  <button onclick="loadBrawlers()">Carica Brawlers</button>
+  <pre id="brawlers_list_out"></pre>
+
+  <hr>
+
+  <!-- 6. GADGET PER BRAWLER -->
+  <h2>6. Gadget per Brawler (test manuale)</h2>
+  Brawler ID: <input id="gadget_brawler_id" value="16000000" size="10">
+  <button onclick="(async()=>{ show('gadgets_out', await call(base()+'/proxy/get_gadgets.php?brawler_id='+document.getElementById('gadget_brawler_id').value,'GET')); })()">Carica Gadget</button>
+  <pre id="gadgets_out"></pre>
+
+  <hr>
+
+  <!-- 7. STARPOWERS PER BRAWLER -->
+  <h2>7. Star Powers per Brawler (test manuale)</h2>
+  Brawler ID: <input id="sp_brawler_id" value="16000000" size="10">
+  <button onclick="(async()=>{ show('sp_out', await call(base()+'/proxy/get_starpowers.php?brawler_id='+document.getElementById('sp_brawler_id').value,'GET')); })()">Carica Star Powers</button>
+  <pre id="sp_out"></pre>
+
+  <hr>
+
+  <!-- 8. AGGIUNGI PREFERITO -->
+  <h2>8. Aggiungi Preferito</h2>
+  User Tag: <input id="fav_user" value="#ABC123"> &nbsp;
+  Player Tag: <input id="fav_player" value="#TAGREALE">
+  <button onclick="(async()=>{ show('fav_add_out', await call(base()+'/favorites/add_favorite.php','POST',{user_tag:document.getElementById('fav_user').value,player_tag:document.getElementById('fav_player').value})); })()">Aggiungi</button>
+  <pre id="fav_add_out"></pre>
+
+  <hr>
+
+  <!-- 9. OTTIENI PREFERITI -->
+  <h2>9. Ottieni Preferiti</h2>
+  User Tag: <input id="get_fav_user" value="#ABC123">
+  <button onclick="(async()=>{ show('fav_get_out', await call(base()+'/favorites/get_favorites.php?user_tag='+encodeURIComponent(document.getElementById('get_fav_user').value),'GET')); })()">Ottieni</button>
+  <pre id="fav_get_out"></pre>
+
+  <hr>
+
+  <!-- 10. AGGIUNGI BUILD con menu dinamici -->
+  <h2>10. Aggiungi Build (menu dinamici)</h2>
+  <p>Prima clicca "Carica Brawlers" al punto 5. I gadget e star power si caricano automaticamente quando scegli il brawler.</p>
+
+  User Tag: <input id="build_user" value="#ABC123"><br><br>
+
+  Brawler:
+  <select id="build_brawler" onchange="onBrawlerChange()" style="width:220px">
+    <option value="">-- Prima carica i brawlers (punto 5) --</option>
+  </select><br><br>
+
+  Gadget:
+  <select id="build_gadget" style="width:220px">
+    <option value="">-- Scegli prima il brawler --</option>
+  </select><br><br>
+
+  Star Power:
+  <select id="build_starpower" style="width:220px">
+    <option value="">-- Scegli prima il brawler --</option>
+  </select><br><br>
+
+  <button onclick="submitBuild()">Salva Build</button>
+  <pre id="build_add_out"></pre>
+
+  <hr>
+
+  <!-- 11. OTTIENI BUILDS -->
+  <h2>11. Ottieni Builds (con nomi da JOIN)</h2>
+  User Tag: <input id="get_build_user" value="#ABC123">
+  <button onclick="(async()=>{ show('build_get_out', await call(base()+'/builds/get_builds.php?user_tag='+encodeURIComponent(document.getElementById('get_build_user').value),'GET')); })()">Ottieni</button>
+  <pre id="build_get_out"></pre>
+
+</body>
+</html>
